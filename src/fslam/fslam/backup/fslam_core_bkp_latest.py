@@ -6,7 +6,6 @@
 #  - Adaptive gating (context + residual-driven)
 #  - Confidence-based retention + early map publish
 #  - Drift nudging (small Gauss-Newton step on Δ per particle; guarded)
-#  - **Gate-based loop closure (single big_orange anchor + lane-axis)**
 #
 # Inputs:
 #   /odometry_integration/car_state (nav_msgs/Odometry)  -> proposal  (swap to GT via param)
@@ -300,34 +299,6 @@ class FastSLAMCore(Node):
 
         self.last_cone_ts: Optional[float] = None
 
-        # ---- Loop-closure (gate-based) state ----
-        # Anchor (locked once)
-        self.lc_anchor_locked = False
-        self.lc_anchor_pos = np.zeros(2, float)        # p_O* (map/world)
-        self.lc_axis_ref = np.array([1.0, 0.0], float) # lane tangent at anchor (unit)
-        # Ellipse axes (along, across)
-        self.lc_a_along = 2.0      # meters (along axis)
-        self.lc_b_across = 1.2     # meters (across axis)
-        # Gates/thresholds
-        self.lc_axis_max_deg = 20.0
-        self.lc_heading_max_deg = 25.0
-        self.lc_speed_min = 5.0    # m/s
-        self.lc_cooldown_m = 80.0  # meters
-        self.lc_axis_nbr_rad = 10.0  # radius to estimate local axis (m)
-        self.lc_dist_window = (2.5, 6.0)  # expected distance to nearest blue/yellow at anchor
-        # For nearest distance stats at anchor
-        self.lc_anchor_b_dist = None
-        self.lc_anchor_y_dist = None
-        # Cooldown tracking
-        self.lc_last_closure_pos = None    # np.array([x,y]) at last closure (corrected)
-        # Global correction (SE(2)) — smoothed
-        self.lc_corr_theta_target = 0.0
-        self.lc_corr_t_target = np.zeros(2, float)
-        self.lc_corr_theta = 0.0
-        self.lc_corr_t = np.zeros(2, float)
-        self.lc_smooth_tau = 1.2   # seconds
-        self.lc_last_smooth_time = None
-
         # ---- I/O ----
         self.create_subscription(Odometry, self.pose_topic_in, self.cb_odom, self.qos)
         self.create_subscription(ConeArrayWithCovariance, self.cones_topic_in, self.cb_cones, self.qos)
@@ -406,35 +377,6 @@ class FastSLAMCore(Node):
         capped.sort(key=_r)
         return capped[:total_cap]
 
-    # -------------------- smoothing for global correction --------------------
-    def _lc_smooth_to_target(self, now_s: float):
-        if self.lc_last_smooth_time is None:
-            self.lc_last_smooth_time = now_s
-            self.lc_corr_theta = self.lc_corr_theta_target
-            self.lc_corr_t = self.lc_corr_t_target.copy()
-            return
-        dt = max(0.0, now_s - self.lc_last_smooth_time)
-        self.lc_last_smooth_time = now_s
-        if dt <= 0.0:
-            return
-        # continuous-time EMA: y += (1 - exp(-dt/tau)) * (target - y)
-        k = 1.0 - math.exp(-dt / max(1e-3, self.lc_smooth_tau))
-        dth = wrap(self.lc_corr_theta_target - self.lc_corr_theta)
-        self.lc_corr_theta = wrap(self.lc_corr_theta + k * dth)
-        self.lc_corr_t = self.lc_corr_t + k * (self.lc_corr_t_target - self.lc_corr_t)
-
-    # -------------------- apply global correction --------------------
-    def _apply_corr_pose(self, x: float, y: float, yaw: float) -> Tuple[float, float, float]:
-        Rc = rot2d(self.lc_corr_theta)
-        p = Rc @ np.array([x, y]) + self.lc_corr_t
-        return float(p[0]), float(p[1]), wrap(yaw + self.lc_corr_theta)
-
-    def _apply_corr_point_cov(self, m: np.ndarray, S: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-        Rc = rot2d(self.lc_corr_theta)
-        m2 = Rc @ m + self.lc_corr_t
-        S2 = Rc @ S @ Rc.T
-        return m2, S2
-
     # -------------------- Odometry IN → publish corrected odom at same rate --------------------
     def cb_odom(self, msg: Odometry):
         t = RclTime.from_msg(msg.header.stamp).nanoseconds * 1e-9
@@ -457,16 +399,10 @@ class FastSLAMCore(Node):
             self.have_pose_feed = True
             self.get_logger().info("[fastslam] proposal feed ready.")
 
-        # Smooth global correction toward target
-        self._lc_smooth_to_target(t)
-
         dx, dy, dth = self.delta_hat
         yaw_c = wrap(yaw + dth)
         x_c = x + dx
         y_c = y + dy
-
-        # Apply global loop-closure correction (if any)
-        x_c, y_c, yaw_c = self._apply_corr_pose(x_c, y_c, yaw_c)
 
         od = Odometry()
         od.header.stamp = msg.header.stamp
@@ -486,7 +422,7 @@ class FastSLAMCore(Node):
 
         self._publish_map(t)
 
-    # -------------------- Cones IN → per-particle JCBB + EKF map update + LC detection --------------------
+    # -------------------- Cones IN → per-particle JCBB + EKF map update --------------------
     def cb_cones(self, msg: ConeArrayWithCovariance):
         if not self.have_pose_feed:
             return
@@ -531,147 +467,10 @@ class FastSLAMCore(Node):
         add(msg.yellow_cones, "yellow")
         add(msg.orange_cones, "orange")
         add(msg.big_orange_cones, "big")
-
         if not obs:
             return
 
-        # ---- Gate-based LC detection (cheap; O(N) on capped obs) ----
-        # Use Δ-hat (PF correction) and then apply current global correction to evaluate in "map"
-        dxh, dyh, dthh = self.delta_hat
-        Rc_hat = rot2d(wrap(yaw_o + dthh))
-        pc_hat = np.array([x_o + dxh, y_o + dyh], float)
-
-        # Collect world (Δ̂) positions for each color (then apply global correction)
-        big_w = []
-        blue_w = []
-        yel_w = []
-        for (pb, _, color) in obs:
-            pw = pc_hat + Rc_hat @ pb  # world under Δ̂
-            # apply current global correction so all LC checks happen in published map frame
-            pw_corr = rot2d(self.lc_corr_theta) @ pw + self.lc_corr_t
-            if color == "big":
-                big_w.append(pw_corr)
-            elif color == "blue":
-                blue_w.append(pw_corr)
-            elif color == "yellow":
-                yel_w.append(pw_corr)
-
-        # One-time anchor lock using first reliable big cone
-        if (not self.lc_anchor_locked) and big_w:
-            # pick the nearest big cone to current pose (less likely to be spurious)
-            cur_p_corr = rot2d(self.lc_corr_theta) @ pc_hat + self.lc_corr_t
-            dists = [np.linalg.norm(b - cur_p_corr) for b in big_w]
-            j = int(np.argmin(dists))
-            self.lc_anchor_pos = big_w[j].copy()
-
-            # Estimate lane axis at anchor from nearby cones (blue + yellow within radius)
-            nbrs = []
-            for arr in (blue_w, yel_w):
-                for p in arr:
-                    if np.linalg.norm(p - self.lc_anchor_pos) <= self.lc_axis_nbr_rad:
-                        nbrs.append(p)
-            if len(nbrs) >= 3:
-                P = np.stack(nbrs, axis=0)
-                P = P - np.mean(P, axis=0, keepdims=True)
-                C = (P.T @ P) / max(1, P.shape[0] - 1)
-                vals, vecs = np.linalg.eigh(C)
-                v1 = vecs[:, int(np.argmax(vals))]  # principal axis
-                self.lc_axis_ref = v1 / (np.linalg.norm(v1) + 1e-12)
-            else:
-                # fallback to car heading at lock moment
-                self.lc_axis_ref = np.array([math.cos(wrap(yaw_o + dthh + self.lc_corr_theta)),
-                                             math.sin(wrap(yaw_o + dthh + self.lc_corr_theta))], float)
-            # Cache anchor blue/yellow distance window (median nearest)
-            def _nearest_dist(pts: List[np.ndarray], ref: np.ndarray) -> Optional[float]:
-                if not pts: return None
-                return float(min(np.linalg.norm(p - ref) for p in pts))
-            self.lc_anchor_b_dist = _nearest_dist(blue_w, self.lc_anchor_pos)
-            self.lc_anchor_y_dist = _nearest_dist(yel_w, self.lc_anchor_pos)
-            self.get_logger().info(f"[fastslam/lc] anchor locked at {self.lc_anchor_pos}, axis=({self.lc_axis_ref[0]:+.2f},{self.lc_axis_ref[1]:+.2f})")
-            self.lc_anchor_locked = True
-
-        # If anchor locked, try closure
-        did_close = False
-        if self.lc_anchor_locked and big_w:
-            # choose the big cone closest to anchor
-            dists = [np.linalg.norm(b - self.lc_anchor_pos) for b in big_w]
-            k = int(np.argmin(dists))
-            cur_big = big_w[k]
-            # Elliptical membership
-            # Decompose delta along/orthogonal to axis_ref
-            t_hat = self.lc_axis_ref
-            n_hat = np.array([-t_hat[1], t_hat[0]], float)
-            d = cur_big - self.lc_anchor_pos
-            d_along = float(np.dot(d, t_hat))
-            d_across = float(np.dot(d, n_hat))
-            m2 = (d_along / self.lc_a_along) ** 2 + (d_across / self.lc_b_across) ** 2
-            # Heading gate
-            yaw_pub = wrap(yaw_o + dthh + self.lc_corr_theta)
-            head_vec = np.array([math.cos(yaw_pub), math.sin(yaw_pub)], float)
-            ang_head = math.degrees(math.acos(max(-1.0, min(1.0, float(np.dot(head_vec, t_hat))))))
-            # Speed and cooldown
-            cur_p_corr = rot2d(self.lc_corr_theta) @ pc_hat + self.lc_corr_t
-            ok_cooldown = True
-            if self.lc_last_closure_pos is not None:
-                if np.linalg.norm(cur_p_corr - self.lc_last_closure_pos) < self.lc_cooldown_m:
-                    ok_cooldown = False
-
-            # Nearby axis estimate from local cones to confirm (keep cheap)
-            nbrs2 = []
-            for arr in (blue_w, yel_w):
-                for p in arr:
-                    if np.linalg.norm(p - cur_big) <= self.lc_axis_nbr_rad:
-                        nbrs2.append(p)
-            axis_ok = False
-            if len(nbrs2) >= 3:
-                P2 = np.stack(nbrs2, axis=0)
-                P2 = P2 - np.mean(P2, axis=0, keepdims=True)
-                C2 = (P2.T @ P2) / max(1, P2.shape[0] - 1)
-                vals2, vecs2 = np.linalg.eigh(C2)
-                v1c = vecs2[:, int(np.argmax(vals2))]
-                v1c = v1c / (np.linalg.norm(v1c) + 1e-12)
-                ang_axis = math.degrees(math.acos(max(-1.0, min(1.0, float(np.dot(v1c, t_hat))))))
-                if ang_axis > 90.0:  # sign invariance
-                    ang_axis = 180.0 - ang_axis
-                axis_ok = (ang_axis <= self.lc_axis_max_deg)
-
-            # Blue/yellow distance sanity (use anchor window if we have it)
-            by_ok = True
-            if (self.lc_anchor_b_dist is not None) and blue_w:
-                nb = min(np.linalg.norm(p - cur_big) for p in blue_w)
-                lo, hi = self.lc_dist_window
-                by_ok = by_ok and (lo <= nb <= hi)
-            if (self.lc_anchor_y_dist is not None) and yel_w:
-                ny = min(np.linalg.norm(p - cur_big) for p in yel_w)
-                lo, hi = self.lc_dist_window
-                by_ok = by_ok and (lo <= ny <= hi)
-
-            if (m2 <= 1.0) and (axis_ok) and (ang_head <= self.lc_heading_max_deg) and (v >= self.lc_speed_min) and ok_cooldown and by_ok:
-                # Compute correction: rotate lane axis to reference, translate orange to anchor
-                th_cur = math.atan2(v1c[1], v1c[0])  # lane axis angle now
-                th_ref = math.atan2(t_hat[1], t_hat[0])
-                dtheta = wrap(th_ref - th_cur)
-                Rtheta = rot2d(dtheta)
-                t_corr = self.lc_anchor_pos - Rtheta @ cur_big
-
-                # Set new targets, smoothing will apply in cb_odom()
-                self.lc_corr_theta_target = wrap(self.lc_corr_theta + dtheta)  # compose with current
-                # compose translation properly in world: new transform applied after current
-                # We want: p' = Rnew * p + tnew  where Rnew,tnew are overall.
-                # If current is (R,c), and increment is (Ri,ti), overall (Ri*R, Ri*c + ti)
-                Rc = rot2d(self.lc_corr_theta)
-                # Compute composed transform
-                Rnew = Rtheta @ Rc
-                tnew = Rtheta @ self.lc_corr_t + t_corr
-                # Extract new theta and t
-                self.lc_corr_theta_target = math.atan2(Rnew[1,0], Rnew[0,0])
-                self.lc_corr_t_target = tnew
-
-                self.lc_last_closure_pos = cur_p_corr.copy()
-                did_close = True
-                self.get_logger().info(f"[fastslam/lc] closure fired: m2={m2:.2f}, axis_ok={axis_ok}, head={ang_head:.1f}°, v={v:.1f} m/s")
-
-        # ---- ENFORCE CAPS to keep JCBB bounded (as before) ----
+        # ENFORCE CAPS to keep JCBB bounded
         obs = self._cap_observations(obs)
 
         # PF predict on Δ
@@ -982,7 +781,6 @@ class FastSLAMCore(Node):
             self.get_logger().info(
                 f"[fastslam/jcbb] t={t_z:7.2f}s obs={len(obs)} proc={proc_ms}ms neff={neff:.1f} "
                 f"Δ̂=[{self.delta_hat[0]:+.3f},{self.delta_hat[1]:+.3f},{math.degrees(self.delta_hat[2]):+.1f}°]"
-                + ("" if not did_close else " [LC fired]")
             )
 
     # -------------------- PF core over Δ --------------------
@@ -1038,7 +836,7 @@ class FastSLAMCore(Node):
         dth = math.atan2(sn, cs)
         return np.array([dx, dy, dth], float)
 
-    # -------------------- Publish map from best particle (aligned to Δ̂ + global LC) --------------------
+    # -------------------- Publish map from best particle (aligned to Δ̂) --------------------
     def _publish_map(self, t_now: float):
         if not self.particles:
             return
@@ -1070,8 +868,6 @@ class FastSLAMCore(Node):
             if not (lm.retained or lm.promoted or lm.conf >= self.map_pub_conf or lm.distinct_hits >= self.map_pub_hits):
                 continue
             m_pub, S_pub = xform_mean_cov(lm.mean, lm.cov)
-            # Apply global loop-closure correction to map outputs
-            m_pub, S_pub = self._apply_corr_point_cov(m_pub, S_pub)
             c = ConeWithCovariance()
             c.point.x = float(m_pub[0]); c.point.y = float(m_pub[1]); c.point.z = 0.0
             c.covariance = [float(S_pub[0,0]), float(S_pub[0,1]),

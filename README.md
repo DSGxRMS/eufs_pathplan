@@ -28,6 +28,13 @@ Access nodes through this:
 
 ```ros2 run pathp path_plot```
 
+To run the full path planning pipeline (Cone Sorting -> Matching -> Path Calculation):
+
+```ros2 run pathp path_planner_node --ros-args -p mission_type:=trackdrive```
+
+Available mission types: `trackdrive`, `skidpad`, `acceleration`.
+
+
 
 * Added a ros bag for controls to run each time. Works on small_track map
 

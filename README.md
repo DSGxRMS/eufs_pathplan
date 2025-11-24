@@ -19,20 +19,42 @@ Run to live view the prediction & correction results relative to GT. #RUN ONLY A
 ### Subscribe to the output top of JCBB node for correct pose (use while skidpad)
 
 
-* Path Planning code for live delaunay plots and midpoint generation
- - Two codes : one has a fallback that predicts cones when one side is not visible
- - Other will be developed based off of mapping
- - Also included a temporary curve fitting code (not optimised)
+## Path Planning
 
-Access nodes through this:
+The repository now includes a full path planning pipeline integrated from `fsd_path_planning`.
 
-```ros2 run pathp path_plot```
+### Overview
+The pipeline consists of:
+1. **Cone Sorting**: Orders cones into left and right boundaries.
+2. **Cone Matching**: Matches left and right cones to define the track.
+3. **Path Calculation**: Generates a smooth centerline path using splines and prepares it for MPC.
 
-To run the full path planning pipeline (Cone Sorting -> Matching -> Path Calculation):
+### Running the Node
+To run the path planner node:
 
-```ros2 run pathp path_planner_node --ros-args -p mission_type:=trackdrive```
+```bash
+ros2 run pathp path_planner_node --ros-args -p mission_type:=trackdrive
+```
 
-Available mission types: `trackdrive`, `skidpad`, `acceleration`.
+**Parameters**:
+- `mission_type`: `trackdrive` (default), `skidpad`, `acceleration`.
+- `cones_topic`: Topic for cone input (default: `/ground_truth/cones`).
+- `odom_topic`: Topic for odometry input (default: `/ground_truth/odom`).
+- `path_topic`: Topic for output path (default: `/path_planner/path`).
+
+**Example with custom topics**:
+```bash
+ros2 run pathp path_planner_node --ros-args -p cones_topic:=/my/cones -p odom_topic:=/my/odom
+```
+
+### Visualization
+The node publishes a `nav_msgs/Path` message to `/path_planner/path`. You can visualize this in Rviz2 by adding a Path display and subscribing to this topic.
+
+### Legacy Nodes
+- `path_plot`: Live Delaunay plots (visualization only).
+  ```bash
+  ros2 run pathp path_plot
+  ```
 
 
 

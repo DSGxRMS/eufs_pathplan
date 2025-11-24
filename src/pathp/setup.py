@@ -20,6 +20,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
+            'path_planner_node = pathp.path_planner_node:main',
             'path = pathp.delaunay:main',
             'path_plot = pathp.path_plot_temp:main'
         ],

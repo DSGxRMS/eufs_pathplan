@@ -13,9 +13,9 @@ from typing import List, Tuple
 
 import numpy as np
 
-from fsd_path_planning.sorting_cones.trace_sorter.core_trace_sorter import TraceSorter
-from fsd_path_planning.types import FloatArray
-from fsd_path_planning.utils.cone_types import ConeTypes
+from pathp.fsd_path_planning.sorting_cones.trace_sorter.core_trace_sorter import TraceSorter
+from pathp.fsd_path_planning.types import FloatArray
+from pathp.fsd_path_planning.utils.cone_types import ConeTypes
 
 
 @dataclass

@@ -16,32 +16,32 @@ from typing import Any, List, Optional, Tuple, Union
 
 import numpy as np
 
-from fsd_path_planning.calculate_path.core_calculate_path import PathCalculationInput
-from fsd_path_planning.cone_matching.core_cone_matching import ConeMatchingInput
-from fsd_path_planning.config import (
+from pathp.fsd_path_planning.cone_matching.core_cone_matching import ConeMatchingInput
+from pathp.fsd_path_planning.calculate_path.core_calculate_path import PathCalculationInput
+from pathp.fsd_path_planning.config import (
     create_default_cone_matching_with_non_monotonic_matches,
     create_default_pathing,
     create_default_sorting,
 )
-from fsd_path_planning.relocalization.acceleration.acceleration_relocalization import (
+from pathp.fsd_path_planning.relocalization.acceleration.acceleration_relocalization import (
     AccelerationRelocalizer,
 )
-from fsd_path_planning.relocalization.relocalization_base_class import Relocalizer
-from fsd_path_planning.relocalization.relocalization_information import (
+from pathp.fsd_path_planning.relocalization.relocalization_base_class import Relocalizer
+from pathp.fsd_path_planning.relocalization.relocalization_information import (
     RelocalizationInformation,
 )
-from fsd_path_planning.relocalization.skidpad.skidpad_relocalizer import (
+from pathp.fsd_path_planning.relocalization.skidpad.skidpad_relocalizer import (
     SkidpadRelocalizer,
 )
-from fsd_path_planning.sorting_cones.core_cone_sorting import ConeSortingInput
-from fsd_path_planning.types import FloatArray, IntArray
-from fsd_path_planning.utils.cone_types import ConeTypes
-from fsd_path_planning.utils.math_utils import (
+from pathp.fsd_path_planning.sorting_cones.core_cone_sorting import ConeSortingInput
+from pathp.fsd_path_planning.types import FloatArray, IntArray
+from pathp.fsd_path_planning.utils.cone_types import ConeTypes
+from pathp.fsd_path_planning.utils.math_utils import (
     angle_from_2d_vector,
     unit_2d_vector_from_angle,
 )
-from fsd_path_planning.utils.mission_types import MissionTypes
-from fsd_path_planning.utils.utils import Timer
+from pathp.fsd_path_planning.utils.mission_types import MissionTypes
+from pathp.fsd_path_planning.utils.utils import Timer
 
 MissionToRelocalizer: dict[MissionTypes, Relocalizer] = {
     MissionTypes.acceleration: AccelerationRelocalizer,

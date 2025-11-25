@@ -13,15 +13,15 @@ from typing import Tuple, cast
 import numpy as np
 from scipy.ndimage import uniform_filter1d
 
-from fsd_path_planning.types import FloatArray, IntArray
-from fsd_path_planning.utils.math_utils import (
+from pathp.fsd_path_planning.types import FloatArray, IntArray
+from pathp.fsd_path_planning.utils.math_utils import (
     Numeric,
     angle_from_2d_vector,
     circle_fit,
     my_njit,
     trace_distance_to_next,
 )
-from fsd_path_planning.utils.spline_fit import SplineEvaluator, SplineFitterFactory
+from pathp.fsd_path_planning.utils.spline_fit import SplineEvaluator, SplineFitterFactory
 
 
 @dataclass

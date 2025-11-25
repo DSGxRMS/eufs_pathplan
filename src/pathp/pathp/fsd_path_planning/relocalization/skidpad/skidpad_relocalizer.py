@@ -12,13 +12,13 @@ from typing import List, Tuple
 import numpy as np
 from sklearn.cluster import DBSCAN
 
-from fsd_path_planning.relocalization.relocalization_base_class import (
+from pathp.fsd_path_planning.relocalization.relocalization_base_class import (
     RelocalizationCallable,
     Relocalizer,
 )
-from fsd_path_planning.relocalization.skidpad.skidpad_path_data import BASE_SKIDPAD_PATH
-from fsd_path_planning.types import FloatArray, IntArray
-from fsd_path_planning.utils.math_utils import (
+from pathp.fsd_path_planning.relocalization.skidpad.skidpad_path_data import BASE_SKIDPAD_PATH
+from pathp.fsd_path_planning.types import FloatArray, IntArray
+from pathp.fsd_path_planning.utils.math_utils import (
     angle_from_2d_vector,
     calc_pairwise_distances,
     circle_fit,

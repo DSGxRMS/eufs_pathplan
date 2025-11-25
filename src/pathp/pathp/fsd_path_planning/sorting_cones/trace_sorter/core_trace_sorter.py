@@ -15,23 +15,23 @@ import numpy as np
 
 # from fsd_path_planning.cone_matching.functional_cone_matching import \
 #     combine_and_sort_virtual_with_real
-from fsd_path_planning.sorting_cones.trace_sorter.combine_traces import (
+from pathp.fsd_path_planning.sorting_cones.trace_sorter.combine_traces import (
     calc_final_configs_for_left_and_right,
 )
-from fsd_path_planning.sorting_cones.trace_sorter.common import NoPathError
-from fsd_path_planning.sorting_cones.trace_sorter.find_configs_and_scores import (
+from pathp.fsd_path_planning.sorting_cones.trace_sorter.common import NoPathError
+from pathp.fsd_path_planning.sorting_cones.trace_sorter.find_configs_and_scores import (
     calc_scores_and_end_configurations,
 )
-from fsd_path_planning.types import FloatArray, IntArray
-from fsd_path_planning.utils.cone_types import ConeTypes, invert_cone_type
-from fsd_path_planning.utils.math_utils import (
+from pathp.fsd_path_planning.types import FloatArray, IntArray
+from pathp.fsd_path_planning.utils.cone_types import ConeTypes, invert_cone_type
+from pathp.fsd_path_planning.utils.math_utils import (
     angle_from_2d_vector,
     my_cdist_sq_euclidean,
     points_inside_ellipse,
     rotate,
     vec_angle_between,
 )
-from fsd_path_planning.utils.utils import Timer
+from pathp.fsd_path_planning.utils.utils import Timer
 
 
 def flatten_cones_by_type_array(cones_by_type: List[FloatArray]) -> FloatArray:

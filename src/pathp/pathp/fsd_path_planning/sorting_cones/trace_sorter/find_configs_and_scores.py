@@ -13,17 +13,17 @@ from typing import Optional, Tuple, cast
 
 import numpy as np
 
-from fsd_path_planning.sorting_cones.trace_sorter.adjacency_matrix import (
+from pathp.fsd_path_planning.sorting_cones.trace_sorter.adjacency_matrix import (
     create_adjacency_matrix,
 )
-from fsd_path_planning.sorting_cones.trace_sorter.cost_function import (
+from pathp.fsd_path_planning.sorting_cones.trace_sorter.cost_function import (
     cost_configurations,
 )
-from fsd_path_planning.sorting_cones.trace_sorter.end_configurations import (
+from pathp.fsd_path_planning.sorting_cones.trace_sorter.end_configurations import (
     find_all_end_configurations,
 )
-from fsd_path_planning.types import BoolArray, FloatArray, IntArray, SortableConeTypes
-from fsd_path_planning.utils.utils import Timer
+from pathp.fsd_path_planning.types import BoolArray, FloatArray, IntArray, SortableConeTypes
+from pathp.fsd_path_planning.utils.utils import Timer
 
 
 def calc_scores_and_end_configurations(

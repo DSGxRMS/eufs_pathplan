@@ -14,12 +14,12 @@ from typing import List, Literal, Tuple, cast
 import numpy as np
 from icecream import ic  # pylint: disable=unused-import  # noqa: F401
 
-from fsd_path_planning.cone_matching.match_directions import (
+from pathp.fsd_path_planning.cone_matching.match_directions import (
     calculate_match_search_direction,
 )
-from fsd_path_planning.types import BoolArray, FloatArray, IntArray, SortableConeTypes
-from fsd_path_planning.utils.cone_types import ConeTypes
-from fsd_path_planning.utils.math_utils import (
+from pathp.fsd_path_planning.types import BoolArray, FloatArray, IntArray, SortableConeTypes
+from pathp.fsd_path_planning.utils.cone_types import ConeTypes
+from pathp.fsd_path_planning.utils.math_utils import (
     angle_from_2d_vector,
     my_cdist_sq_euclidean,
     my_njit,

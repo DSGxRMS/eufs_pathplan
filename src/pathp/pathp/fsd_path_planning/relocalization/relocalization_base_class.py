@@ -11,7 +11,7 @@ from typing import List, Tuple
 
 from typing_extensions import Protocol
 
-from fsd_path_planning.types import FloatArray
+from pathp.fsd_path_planning.types import FloatArray
 
 
 class RelocalizationCallable(Protocol):

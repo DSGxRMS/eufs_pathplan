@@ -10,12 +10,12 @@ Project: fsd_path_planning
 
 import numpy as np
 
-from fsd_path_planning.calculate_path.core_calculate_path import (
+from pathp.fsd_path_planning.calculate_path.core_calculate_path import (
     CalculatePath,
     PathCalculationInput,
 )
-from fsd_path_planning.types import FloatArray
-from fsd_path_planning.utils.math_utils import trace_distance_to_next
+from pathp.fsd_path_planning.types import FloatArray
+from pathp.fsd_path_planning.utils.math_utils import trace_distance_to_next
 
 
 class SkidpadCalculatePath(CalculatePath):

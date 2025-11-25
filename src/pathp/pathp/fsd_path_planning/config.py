@@ -10,17 +10,17 @@ from typing import Any, Dict, Type
 
 import numpy as np
 
-from fsd_path_planning.calculate_path.core_calculate_path import (
+from pathp.fsd_path_planning.calculate_path.core_calculate_path import (
     CalculatePath as CalculatePath,
 )
 
 # for reexport
-from fsd_path_planning.calculate_path.skidpad_calculate_path import SkidpadCalculatePath
-from fsd_path_planning.cone_matching.core_cone_matching import (
+from pathp.fsd_path_planning.calculate_path.skidpad_calculate_path import SkidpadCalculatePath
+from pathp.fsd_path_planning.cone_matching.core_cone_matching import (
     ConeMatching as ConeMatching,
 )
-from fsd_path_planning.sorting_cones.core_cone_sorting import ConeSorting
-from fsd_path_planning.utils.mission_types import MissionTypes
+from pathp.fsd_path_planning.sorting_cones.core_cone_sorting import ConeSorting
+from pathp.fsd_path_planning.utils.mission_types import MissionTypes
 
 KwargsType = Dict[str, Any]
 

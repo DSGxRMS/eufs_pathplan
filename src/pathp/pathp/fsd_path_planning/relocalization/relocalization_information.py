@@ -6,7 +6,7 @@ from typing_extensions import (
     Self,
 )
 
-from fsd_path_planning.types import FloatArray
+from pathp.fsd_path_planning.types import FloatArray
 
 
 @dataclass

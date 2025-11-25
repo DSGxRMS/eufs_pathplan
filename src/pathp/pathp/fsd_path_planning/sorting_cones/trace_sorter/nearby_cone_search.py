@@ -16,12 +16,12 @@ from typing import Dict, Optional, Tuple
 
 import numpy as np
 
-from fsd_path_planning.cone_matching.match_directions import (
+from pathp.fsd_path_planning.cone_matching.match_directions import (
     calculate_search_direction_for_one,
 )
-from fsd_path_planning.types import BoolArray, FloatArray, IntArray
-from fsd_path_planning.utils.cone_types import ConeTypes
-from fsd_path_planning.utils.math_utils import (
+from pathp.fsd_path_planning.types import BoolArray, FloatArray, IntArray
+from pathp.fsd_path_planning.utils.cone_types import ConeTypes
+from pathp.fsd_path_planning.utils.math_utils import (
     my_cdist_sq_euclidean,
     my_njit,
     vec_angle_between,

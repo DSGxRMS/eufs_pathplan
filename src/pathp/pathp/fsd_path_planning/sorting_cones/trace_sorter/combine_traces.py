@@ -11,8 +11,8 @@ from typing import Optional, Tuple
 
 import numpy as np
 
-from fsd_path_planning.types import FloatArray, IntArray
-from fsd_path_planning.utils.math_utils import (
+from pathp.fsd_path_planning.types import FloatArray, IntArray
+from pathp.fsd_path_planning.utils.math_utils import (
     angle_difference,
     angle_from_2d_vector,
 )

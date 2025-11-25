@@ -8,9 +8,38 @@ from nav_msgs.msg import Odometry, Path
 from geometry_msgs.msg import PoseStamped
 from eufs_msgs.msg import ConeArrayWithCovariance
 
-from pathp.fsd_path_planning.full_pipeline.full_pipeline import PathPlanner
-from pathp.fsd_path_planning.utils.mission_types import MissionTypes
-from pathp.fsd_path_planning.utils.cone_types import ConeTypes
+import pathp.fsd_path_planning.full_pipeline.full_pipeline as pp
+
+
+from enum import IntEnum
+
+class ConeTypes(IntEnum):
+    """
+    Enum for all possible cone types
+    """
+
+    UNKNOWN = 0
+    RIGHT = YELLOW = 1
+    LEFT = BLUE = 2
+    START_FINISH_AREA = ORANGE_SMALL = 3
+    START_FINISH_LINE = ORANGE_BIG = 4
+
+
+class MissionTypes(IntEnum):
+    """
+    Enum for each mission type
+    """
+
+    (
+        none,
+        acceleration,
+        skidpad,
+        autocross,
+        trackdrive,
+        ebs_test,
+        inspection,
+        manual_driving,
+    ) = range(8)
 
 class PathPlannerNode(Node):
     def __init__(self):
@@ -37,7 +66,7 @@ class PathPlannerNode(Node):
         else:
             self.mission = MissionTypes.trackdrive
         
-        self.planner = PathPlanner(self.mission)
+        self.planner = pp.PathPlanner(self.mission)
 
         # QoS
         qos = QoSProfile(depth=10, reliability=QoSReliabilityPolicy.BEST_EFFORT, history=QoSHistoryPolicy.KEEP_LAST)
@@ -79,9 +108,8 @@ class PathPlannerNode(Node):
 
         self.cones[ConeTypes.BLUE] = extract_cones(msg.blue_cones)
         self.cones[ConeTypes.YELLOW] = extract_cones(msg.yellow_cones)
-        self.cones[ConeTypes.ORANGE] = extract_cones(msg.orange_cones)
-        self.cones[ConeTypes.BIG_ORANGE] = extract_cones(msg.big_orange_cones)
-        self.cones[ConeTypes.UNKNOWN] = extract_cones(msg.unknown_cones)
+        self.cones[ConeTypes.ORANGE_SMALL] = extract_cones(msg.orange_cones)
+        self.cones[ConeTypes.ORANGE_BIG] = extract_cones(msg.big_orange_cones)
 
         # Calculate Path
         try:

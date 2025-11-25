@@ -8,8 +8,8 @@ Project: fsd_path_planning
 
 import numpy as np
 
-from fsd_path_planning.types import FloatArray, IntArray
-from fsd_path_planning.utils.math_utils import my_njit
+from pathp.fsd_path_planning.utils.math_utils import my_njit
+from pathp.fsd_path_planning.types import FloatArray, IntArray
 
 
 class NoPathError(RuntimeError):

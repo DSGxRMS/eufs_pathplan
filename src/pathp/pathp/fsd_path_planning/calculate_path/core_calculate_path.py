@@ -13,13 +13,13 @@ from typing import List, Optional, Tuple, cast
 
 import numpy as np
 
-from fsd_path_planning.calculate_path.path_calculator_helpers import (
+from pathp.fsd_path_planning.calculate_path.path_calculator_helpers import (
     PathCalculatorHelpers,
 )
-from fsd_path_planning.calculate_path.path_parameterization import PathParameterizer
-from fsd_path_planning.types import BoolArray, FloatArray, IntArray
-from fsd_path_planning.utils.cone_types import ConeTypes
-from fsd_path_planning.utils.math_utils import (
+from pathp.fsd_path_planning.calculate_path.path_parameterization import PathParameterizer
+from pathp.fsd_path_planning.types import BoolArray, FloatArray, IntArray
+from pathp.fsd_path_planning.utils.cone_types import ConeTypes
+from pathp.fsd_path_planning.utils.math_utils import (
     angle_from_2d_vector,
     circle_fit,
     normalize_last_axis,
@@ -28,7 +28,7 @@ from fsd_path_planning.utils.math_utils import (
     unit_2d_vector_from_angle,
     vec_angle_between,
 )
-from fsd_path_planning.utils.spline_fit import SplineEvaluator, SplineFitterFactory
+from pathp.fsd_path_planning.utils.spline_fit import SplineEvaluator, SplineFitterFactory
 
 SplineEvalByType = List[SplineEvaluator]
 

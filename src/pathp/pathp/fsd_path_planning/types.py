@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any, Literal
 import numpy as np
 from numpy.typing import NDArray
 
-from fsd_path_planning.utils.cone_types import ConeTypes
+from pathp.fsd_path_planning.utils.cone_types import ConeTypes
 
 if TYPE_CHECKING:
     GenericArray = NDArray[Any]

@@ -14,7 +14,7 @@ from typing import Any, Optional, Tuple
 import numpy as np
 from scipy.interpolate import splev, splprep
 
-from fsd_path_planning.utils.math_utils import trace_distance_to_next
+from pathp.fsd_path_planning.utils.math_utils import trace_distance_to_next
 
 
 @dataclass
